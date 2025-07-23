@@ -1,0 +1,8 @@
+langchain
+langgraph
+pinecone
+openai
+google-generativeai
+tqdm
+requests
+python-dotenv 
