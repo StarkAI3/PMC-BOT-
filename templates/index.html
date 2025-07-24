@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PMC Chatbot</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            background-color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .chat-container {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background-color: #1e40af;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .message {
+            padding: 0.75rem 1rem;
+            border-radius: 20px;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+
+        .bot {
+            background-color: #e2e8f0;
+            align-self: flex-start;
+        }
+
+        .user {
+            background-color: #3b82f6;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .input-box {
+            display: flex;
+            border-top: 1px solid #ddd;
+        }
+
+        .input-box input {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .input-box button {
+            background-color: #1d4ed8;
+            color: white;
+            border: none;
+            padding: 0 1.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .input-box button:hover {
+            background-color: #2563eb;
+        }
+
+        .loading {
+            font-size: 0.9rem;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="chat-container">
+        <div class="header">PMC Chatbot</div>
+        <div class="chat-box" id="chatBox">
+            <div class="message bot">Hello! I’m the PMC Chatbot. How can I help you today?</div>
+        </div>
+        <div class="input-box">
+            <input type="text" id="userInput" placeholder="Type your message..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById("chatBox");
+        const userInput = document.getElementById("userInput");
+        let chatHistory = [];
+
+        function formatMessage(text) {
+            // Convert URLs to clickable links
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            let formatted = text.replace(urlRegex, url => {
+                return `<a href="${url}" target="_blank" style="color:#2563eb;text-decoration:underline;">${url}</a>`;
+            });
+
+            // Replace line breaks with <br>
+            formatted = formatted.replace(/\n/g, "<br>");
+
+            // Optional: bold markdown-like **text**
+            formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+
+            return formatted;
+        }
+
+        function addMessage(text, sender) {
+            const msg = document.createElement("div");
+            msg.className = `message ${sender}`;
+            msg.innerHTML = formatMessage(text);  // Use innerHTML instead of innerText
+            chatBox.appendChild(msg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = userInput.value.trim();
+            if (!input) return;
+
+            addMessage(input, "user");
+            userInput.value = "";
+
+            const loadingMsg = document.createElement("div");
+            loadingMsg.className = "message bot loading";
+            loadingMsg.innerText = "Typing...";
+            chatBox.appendChild(loadingMsg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            fetch("http://localhost:8000/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ user_input: input, history: chatHistory })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    chatBox.removeChild(loadingMsg);
+
+                    if (data && typeof data.answer === "string") {
+                        addMessage(data.answer, "bot");
+                        // Update chat history
+                        chatHistory.push({ user: input, bot: data.answer });
+                    } else {
+                        addMessage("Sorry, I didn’t understand that.", "bot");
+                    }
+                })
+                .catch(err => {
+                    chatBox.removeChild(loadingMsg);
+                    addMessage("Server error. Please try again.", "bot");
+                });
+        }
+
+        userInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") sendMessage();
+        });
+    </script>
+
+
+</body>
+
+</html>
