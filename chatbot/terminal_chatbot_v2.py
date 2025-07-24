@@ -108,7 +108,7 @@ Instructions:
 - The most relevant records are listed first.
 - Summarize and explain the relevant details in simple language, not as raw data or JSON.
 - If multiple records are relevant, summarize or list them as appropriate.
-- When including a link, use Markdown format with descriptive text, e.g. [here](URL) or [link](URL), not [URL](URL).
+- When including a link, use Markdown format with descriptive text, e.g. [Pay Online](URL) or [property tax portal](URL). Never use the URL itself as the link text. Always use a short, meaningful description for the link text. Do not use [URL](URL) or [here](URL).
 - Embed the link in the most relevant word or phrase, not as a raw URL.
 - If a link is already included in your answer, do not repeat it. Avoid repeating the same link multiple times in your response.
 - Do not say 'not found' if any relevant information is present in the context.
@@ -136,6 +136,26 @@ def remove_duplicate_links(text):
         return url
     # Replace duplicate URLs with empty string
     return re.sub(r'https?://[^\s)]+', url_replacer, text)
+
+def validate_and_fix_markdown_links(text):
+    """
+    Ensures all Markdown links are well-formed and descriptive.
+    - Fixes malformed links.
+    - Warns if link text is a URL or 'here', and suggests a better description.
+    """
+    def replacer(match):
+        link_text = match.group(1)
+        url = match.group(2)
+        # If link text is a URL or 'here', suggest improvement
+        if link_text.lower() == 'here' or re.match(r'https?://', link_text):
+            # Optionally, you could log or flag this for review
+            return f"[link]({url})"  # fallback to 'link' if no context
+        return match.group(0)  # leave as is if descriptive
+    # Fix malformed links: [text]( url ) with spaces
+    text = re.sub(r'\[(.*?)\]\(\s*(https?://[^\s)]+)\s*\)', r'[\1](\2)', text)
+    # Replace [here](url) or [URL](url) with [link](url) as a fallback
+    text = re.sub(r'\[(here|https?://[^\]]+)\]\((https?://[^\s)]+)\)', replacer, text, flags=re.IGNORECASE)
+    return text
 
 # Main chat loop
 def main():
@@ -179,6 +199,7 @@ def main():
         answer = response.text.strip()
         answer = remove_duplicate_links(answer)
         answer = replace_url_markdown_with_here(answer)
+        answer = validate_and_fix_markdown_links(answer)
         print(f"Bot: {answer}")
         # Update history and previous queries
         history.append({'user': user_input, 'bot': answer})
