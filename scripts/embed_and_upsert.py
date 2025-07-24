@@ -43,6 +43,19 @@ def chunk_text(text):
     splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
     return splitter.split_text(text)
 
+def filter_metadata(meta):
+    # Only keep primitive types or list of strings
+    allowed_types = (str, int, float, bool)
+    filtered = {}
+    for k, v in meta.items():
+        if k == 'raw':
+            continue
+        if isinstance(v, allowed_types):
+            filtered[k] = v
+        elif isinstance(v, list) and all(isinstance(i, str) for i in v):
+            filtered[k] = v
+    return filtered
+
 def main():
     records = []
     with open(DATA_FILE, 'r', encoding='utf-8') as f:
@@ -68,6 +81,7 @@ def main():
                 meta['chunk_id'] = i+1
                 meta['total_chunks'] = len(chunks)
                 meta['text'] = chunk
+                meta = filter_metadata(meta)
                 batch.append({'id': chunk_id, 'values': embedding, 'metadata': meta})
             if len(batch) >= BATCH_SIZE:
                 index.upsert(vectors=batch)

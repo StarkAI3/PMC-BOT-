@@ -21,9 +21,19 @@ PDF_PATTERN = re.compile(r'https?://[^\s]+\.pdf')
 PHONE_PATTERN = re.compile(r'\b(\+91[-\s]?)?[0]?[6789]\d{9}\b')
 MAP_PATTERN = re.compile(r'https?://(goo\.gl|maps\.google\.com|www\.google\.com/maps)[^\s]*')
 
+# Recursive cleaner for null/empty values
+def clean_obj(obj):
+    if isinstance(obj, dict):
+        return {k: clean_obj(v) for k, v in obj.items() if v not in [None, '', [], {}] and clean_obj(v) not in [None, '', [], {}]}
+    elif isinstance(obj, list):
+        return [clean_obj(v) for v in obj if v not in [None, '', [], {}] and clean_obj(v) not in [None, '', [], {}]]
+    else:
+        return obj
+
 # Helper to extract fields from JSON
 def extract_fields(obj):
-    text = json.dumps(obj, ensure_ascii=False)
+    cleaned = clean_obj(obj)
+    text = json.dumps(cleaned, ensure_ascii=False)
     pdfs = list(set(PDF_PATTERN.findall(text)))
     phones = list(set(PHONE_PATTERN.findall(text)))
     maps = list(set(MAP_PATTERN.findall(text)))
@@ -32,7 +42,7 @@ def extract_fields(obj):
         'pdf_links': pdfs,
         'phone_numbers': phones,
         'map_links': maps,
-        'raw': obj
+        'raw': cleaned
     }
 
 def get_existing_ids(output_file):
