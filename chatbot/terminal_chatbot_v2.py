@@ -99,7 +99,7 @@ Relevant Information from PMC Database:
     if chat_history:
         prompt += "\nPrevious Conversation Context:\n"
         for turn in chat_history:
-            prompt += f"User: {turn['user']}\nBot: {turn['bot']}\n"
+            prompt += f"User: {turn.user}\nBot: {turn.bot}\n"
     prompt += f"""
 Instructions:
 - Carefully read all the records above and answer the user's query in a clear, friendly, and human-like manner.
