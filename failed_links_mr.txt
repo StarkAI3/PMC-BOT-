@@ -1,0 +1,6 @@
+https://webadmin.pmc.gov.in/api/listing-api/committee_decisions?&page_no=1&limit=100&sort_by=&status=&lang=mr&vocabulary=name_of_the_committee
+https://www.pmc.gov.in/_next/data/20VYjpUoXxe0T-efxO9Pl/en/project/electric-vehicle-charging-station.json?dept=chief-engineer-project
+https://www.pmc.gov.in/_next/data/20VYjpUoXxe0T-efxO9Pl/en/about-pune.json
+https://webadmin.pmc.gov.in/api/budgets?order=desc&lang=mr
+https://webadmin.pmc.gov.in/api/ward/ward_offices?zone=&lang=mr
+https://webadmin.pmc.gov.in/api/hospital/pmc_hospitals?hospital_category=&page=1&limit=8&hospital_name=&sort_by=undefined&lang=mr

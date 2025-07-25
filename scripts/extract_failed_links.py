@@ -1,27 +1,18 @@
 import os
 import re
+import sys
 import json
 import requests
 from tqdm import tqdm
 import urllib3
 import hashlib
 
-# Suppress only the single InsecureRequestWarning from urllib3 needed.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Input files
-ENG_LINKS = 'eng_links'
-MR_LINKS = 'mr_links'
-# Output files
-OUT_ENG = 'data/pmc_data_en.jsonl'
-OUT_MR = 'data/pmc_data_mr.jsonl'
-
-# Regex patterns for extraction
 PDF_PATTERN = re.compile(r'https?://[^\s]+\.pdf')
 PHONE_PATTERN = re.compile(r'\b(\+91[-\s]?)?[0]?[6789]\d{9}\b')
 MAP_PATTERN = re.compile(r'https?://(goo\.gl|maps\.google\.com|www\.google\.com/maps)[^\s]*')
 
-# Recursive cleaner for null/empty values
 def clean_obj(obj):
     if isinstance(obj, dict):
         return {k: clean_obj(v) for k, v in obj.items() if v not in [None, '', [], {}] and clean_obj(v) not in [None, '', [], {}]}
@@ -30,14 +21,12 @@ def clean_obj(obj):
     else:
         return obj
 
-# Helper to extract fields from JSON
 def extract_fields(obj):
     cleaned = clean_obj(obj)
     text = json.dumps(cleaned, ensure_ascii=False)
     pdfs = list(set(PDF_PATTERN.findall(text)))
     phones = list(set(PHONE_PATTERN.findall(text)))
     maps = list(set(MAP_PATTERN.findall(text)))
-    # You can add more extraction logic here (external links, dates, etc.)
     return {
         'pdf_links': pdfs,
         'phone_numbers': phones,
@@ -61,18 +50,18 @@ def get_existing_ids(output_file):
                         continue
     return ids
 
-def process_links(input_file, output_file, lang):
+def process_failed_links(failed_links_file, output_file, lang):
     existing_ids = get_existing_ids(output_file)
-    with open(input_file, 'r', encoding='utf-8') as f:
+    with open(failed_links_file, 'r', encoding='utf-8') as f:
         links = [line.strip() for line in f if line.strip()]
-    success_log = f'success_links_{lang}.txt'
-    fail_log = f'failed_links_{lang}.txt'
+    success_log = f'success_links_{lang}_retry.txt'
+    fail_log = f'failed_links_{lang}_retry.txt'
     successes = []
     failures = []
     with open(output_file, 'a', encoding='utf-8') as out, \
          open(success_log, 'w', encoding='utf-8') as success_f, \
          open(fail_log, 'w', encoding='utf-8') as fail_f:
-        for url in tqdm(links, desc=f'Processing {lang} links'):
+        for url in tqdm(links, desc=f'Retrying {lang} failed links'):
             attempt = 0
             success = False
             while attempt < 3 and not success:
@@ -81,7 +70,6 @@ def process_links(input_file, output_file, lang):
                     resp = requests.get(url, timeout=15, verify=False)
                     resp.raise_for_status()
                     data = resp.json()
-                    # Some APIs return lists, some dicts
                     if isinstance(data, dict) and 'data' in data and isinstance(data['data'], list):
                         wrote = False
                         for item in data['data']:
@@ -116,14 +104,19 @@ def process_links(input_file, output_file, lang):
             else:
                 failures.append(url)
                 fail_f.write(url + '\n')
-    print(f"\nSummary for {lang} links:")
+    print(f"\nRetry summary for {lang} failed links:")
     print(f"  Total links: {len(links)}")
     print(f"  Successes: {len(successes)} (see {success_log})")
     print(f"  Failures: {len(failures)} (see {fail_log})")
 
 def main():
-    process_links(ENG_LINKS, OUT_ENG, 'en')
-    process_links(MR_LINKS, OUT_MR, 'mr')
+    if len(sys.argv) != 4:
+        print("Usage: python extract_failed_links.py <failed_links_file> <lang> <output_jsonl_file>")
+        sys.exit(1)
+    failed_links_file = sys.argv[1]
+    lang = sys.argv[2]
+    output_file = sys.argv[3]
+    process_failed_links(failed_links_file, output_file, lang)
 
 if __name__ == '__main__':
     main() 
