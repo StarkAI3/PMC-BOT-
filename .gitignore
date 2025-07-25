@@ -62,8 +62,9 @@ coverage.xml
 .vscode/
 
 # Data files (if you want to exclude large or sensitive data)
-# Uncomment the next line if you don't want to push data files
-# data/
+data/
+eng_links
+mr_links
 
 # OS files
 .DS_Store
